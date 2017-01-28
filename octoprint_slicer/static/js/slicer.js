@@ -159,6 +159,9 @@ $(function() {
                     <button class="scale disabled" title="Scale"><img src="'
                 + PLUGIN_BASEURL
                 + 'slicer/static/img/scale.png"></button>\
+                    <button class="arrange" title="Arrange"><img src="'
+                + PLUGIN_BASEURL
+                + 'slicer/static/img/arrange.png"></button>\
                 </div>\
                 <div class="values translate">\
                     <div>\
@@ -219,6 +222,23 @@ $(function() {
 		// Set selection mode to scale
 		self.transformControls.setMode("scale");
                 self.toggleValueInputs($("#slicer-viewport .scale.values div"));
+            });
+            $("#slicer-viewport button.arrange").click(function(event) {
+	      // Set selection mode to scale
+              var rectangles = [
+                {name:0, width: 7, height: 10},
+                {name:1, width: 7, height: 10},
+                {name:2, width: 7, height: 10},
+                {name:3, width: 7, height: 10}
+              ];
+              RectanglePacker.packWithRotation(rectangles, function (x) {
+                console.log(x)
+                console.log(x.rectangleGrid.gridToString(
+                  x.width,x.height,1,"  ",
+                  function (r) {
+                    return r.name;
+                  }));
+              });
             });
             $("#slicer-viewport .values input").change(function() {
                 self.applyChange($(this));
