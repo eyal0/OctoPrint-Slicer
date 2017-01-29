@@ -225,16 +225,17 @@ $(function() {
             });
             $("#slicer-viewport button.arrange").click(function(event) {
 	      // Set selection mode to scale
-              /*var rectangles = [
+              var rectangles = [
                 {name:0, width: 7, height: 10},
                 {name:1, width: 7, height: 10},
                 {name:2, width: 7, height: 10},
                 {name:3, width: 7, height: 10}
-                ];*/
-              var rectangles = [];
-              for (var i=1; i < 7; i++) {
+                //{name:4, width: 3, height: 3}
+                ];
+              /*var rectangles = [];
+              for (var i=1; i < 8; i++) {
                 rectangles.push({"name": i, "width":i, "height":i});
-              }
+              }*/
               var tries = 0;
               var bestHW = {}
               RectanglePacker.packWithRotation(
@@ -263,6 +264,7 @@ $(function() {
                           "width": newWidth};
                 });
               console.log(tries);
+              console.log(bestHW);
             });
             $("#slicer-viewport .values input").change(function() {
                 self.applyChange($(this));
