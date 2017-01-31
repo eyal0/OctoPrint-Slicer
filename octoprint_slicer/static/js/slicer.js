@@ -602,9 +602,38 @@ $(function() {
         }
 
         self.render = function() {
-            self.orbitControls.update();
-            self.transformControls.update();
-            self.renderer.render( self.scene, self.camera );
+          self.orbitControls.update();
+          self.transformControls.update();
+          if (self.stlFiles.length >= 2) {
+            var triangleList0 = Intersection2D.object3DToTriangles(self.stlFiles[0].model);
+            var g = new THREE.Geometry();
+            g.fromBufferGeometry(self.stlFiles[1].model.children[0].geometry);
+            var overlap = false;
+            for (var i = 0; i < g.vertices.length; i++) {
+              for (var j = 0; j < triangleList0.length; j++) {
+                var triangle = triangleList0[j]
+                
+                var angle = Intersection2D.angle(triangle.a,
+                                                 triangle.b,
+                                                 triangle.c);
+                if (triangle.a.x == triangle.b.x && triangle.a.y == triangle.b.y ||
+                    triangle.a.x == triangle.c.x && triangle.a.y == triangle.c.y ||
+                    triangle.c.x == triangle.b.x && triangle.c.y == triangle.b.y) {
+                  continue; // skip, maybe we'll need to compare for near points?
+                }
+                if (angle == 0 || angle == Math.PI) {
+                  continue; //skip it, maybe we need to fix this for angles very near PI or 0
+                }
+                if (Intersection2D.pointInTriangle(self.stlFiles[1].model.localToWorld(g.vertices[i]), triangle)) {
+                  overlap = true;
+                  break;
+                }
+              }
+              if (overlap) break;
+            }
+            console.log("overlap: " + overlap);
+          }
+          self.renderer.render( self.scene, self.camera );
         };
 
 	self.slicerProperties = ko.observable();
