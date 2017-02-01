@@ -143,6 +143,12 @@ $(function() {
             self.scene.add(self.walls);
             self.scene.add(self.floor);
 
+          self.octree = new THREE.Octree({
+            objectsThreshold: 1,
+            //scene: self.scene,
+            undeferred: true
+          });
+
             self.renderer = new THREE.WebGLRenderer( { canvas: self.canvas, antialias: true } );
             self.renderer.setClearColor( 0xd8d8d8 );
             self.renderer.setSize( CANVAS_WIDTH, CANVAS_HEIGHT );
@@ -203,7 +209,11 @@ $(function() {
             self.transformControls.addEventListener("mouseDown", self.startTransform);
             self.transformControls.addEventListener("mouseUp", self.endTransform);
             self.transformControls.addEventListener("change", self.updateTransformInputs);
-            self.transformControls.addEventListener("objectChange", function (e) {self.stlModified = true});
+          self.transformControls.addEventListener("objectChange", function (e) {
+            self.stlModified = true;
+            self.octree.rebuild();
+            self.findAllCollisions();
+          });
             self.scene.add(self.transformControls);
             self.updatePrinterBed();
 
@@ -282,6 +292,24 @@ $(function() {
 	    });
         };
 
+      self.findAllCollisions = function() {
+        var area = self.BEDSIZE_X_MM * self.BEDSIZE_Y_MM;
+        var stepSize = Math.sqrt(area/10000.0);
+        var direction = new THREE.Vector3(0,0,1);
+        direction.normalize();
+        var rayCaster = new THREE.Raycaster(new THREE.Vector3(), direction);
+        for (var x = -self.BEDSIZE_X_MM/2; x < self.BEDSIZE_X_MM/2; x += stepSize) {
+          for (var y = -self.BEDSIZE_Y_MM/2; y < self.BEDSIZE_Y_MM/2; y += stepSize) {
+            rayCaster.set(new THREE.Vector3(x,y,0), direction);
+            var octreeResults = self.octree.search(rayCaster.ray.origin, rayCaster.ray.far, true, rayCaster.ray.direction);
+            var intersections = rayCaster.intersectOctreeObjects(octreeResults);
+            if (intersections.length) {
+              console.log("intersections: " + [x,y,intersections.length].join(","));
+              return;
+            }
+          }
+        }
+      }
 	self.isStlFileActive = function(stlFile) {
 	    return stlFile.model.children[0].material.color.equals(self.effectController.modelActiveColor);
 	}
@@ -307,7 +335,13 @@ $(function() {
 
         self.loadSTL = function(target, file, force, stlFile) {
             var loader = new THREE.STLLoader();
-            return loader.load(BASEURL + "downloads/files/" + target + "/" + file, function ( geometry ) {
+          return loader.load(BASEURL + "downloads/files/" + target + "/" + file, function ( geometry ) {
+            if (geometry.isBufferGeometry) {
+              // Need to convert to a regular geometry for the octree.
+              var newGeometry = new THREE.Geometry();
+              newGeometry.fromBufferGeometry(geometry);
+              geometry = newGeometry;
+            }
                 var material = new THREE.MeshStandardMaterial({
 		    color: self.effectController.modelInactiveColor,  // We'll mark it active below.
 		    shading: THREE.SmoothShading,
@@ -323,7 +357,11 @@ $(function() {
                 stlModel.position.copy(center.negate());
 		stlFile['model'] = model;
 		self.setStlFileActive(stlFile);
-                self.scene.add(model);
+              self.scene.add(model);
+              
+            self.octree.add(stlModel);
+              self.octree.rebuild();
+              self.findAllCollisions();
                 self.render();
             });
         };
@@ -361,6 +399,8 @@ $(function() {
                 model.scale.y =  parseFloat($("#slicer-viewport .scale.values input[name=\"y\"]").val())
                 model.scale.z =  parseFloat($("#slicer-viewport .scale.values input[name=\"z\"]").val())
                 self.fixZPosition(model);
+              self.octree.rebuild();
+              self.findAllCollisions();
                 self.render();
             }
         };
@@ -604,36 +644,7 @@ $(function() {
         self.render = function() {
           self.orbitControls.update();
           self.transformControls.update();
-          if (self.stlFiles.length >= 2) {
-            var triangleList0 = Intersection2D.object3DToTriangles(self.stlFiles[0].model);
-            var g = new THREE.Geometry();
-            g.fromBufferGeometry(self.stlFiles[1].model.children[0].geometry);
-            var overlap = false;
-            for (var i = 0; i < g.vertices.length; i++) {
-              for (var j = 0; j < triangleList0.length; j++) {
-                var triangle = triangleList0[j]
-                
-                var angle = Intersection2D.angle(triangle.a,
-                                                 triangle.b,
-                                                 triangle.c);
-                if (triangle.a.x == triangle.b.x && triangle.a.y == triangle.b.y ||
-                    triangle.a.x == triangle.c.x && triangle.a.y == triangle.c.y ||
-                    triangle.c.x == triangle.b.x && triangle.c.y == triangle.b.y) {
-                  continue; // skip, maybe we'll need to compare for near points?
-                }
-                if (angle == 0 || angle == Math.PI) {
-                  continue; //skip it, maybe we need to fix this for angles very near PI or 0
-                }
-                if (Intersection2D.pointInTriangle(self.stlFiles[1].model.localToWorld(g.vertices[i]), triangle)) {
-                  overlap = true;
-                  break;
-                }
-              }
-              if (overlap) break;
-            }
-            console.log("overlap: " + overlap);
-          }
-          self.renderer.render( self.scene, self.camera );
+          self.renderer.render(self.scene, self.camera);
         };
 
 	self.slicerProperties = ko.observable();
