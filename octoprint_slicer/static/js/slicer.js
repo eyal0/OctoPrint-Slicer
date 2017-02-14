@@ -675,8 +675,15 @@ $(function() {
 
         self.canSliceNow = ko.computed(function () {
             // TODO: We should be checking for same_device here, too.
+            same_device = false;
+            currentSlicerInfo = _.find(self.slicingViewModel.slicers(),
+                                       function (x) {
+                                           return x.key == self.slicingViewModel.slicer();
+                                       });
+            // if sameDevice is undefined, assume that it's true.
+            sameDevice = (currentSlicerInfo.sameDevice === false) ? false || true;
             return self.slicingViewModel.enableSliceButton() &&
-                !self.isPrinting();
+                (!self.isPrinting() || !sameDevice);
         });
 
         self.init();
