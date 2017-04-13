@@ -681,7 +681,7 @@ $(function() {
                                            return x.key == self.slicingViewModel.slicer();
                                        });
             // if sameDevice is undefined, assume that it's true.
-            sameDevice = (currentSlicerInfo.sameDevice === false) ? false || true;
+            sameDevice = (currentSlicerInfo.sameDevice === false) ? false : true;
             return self.slicingViewModel.enableSliceButton() &&
                 (!self.isPrinting() || !sameDevice);
         });
