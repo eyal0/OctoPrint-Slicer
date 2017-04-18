@@ -45,7 +45,7 @@ import logging.handlers
 class SlicerPlugin(octoprint.plugin.SettingsPlugin,
                    octoprint.plugin.AssetPlugin,
                    octoprint.plugin.TemplatePlugin,
-				   octoprint.plugin.BlueprintPlugin):
+		   octoprint.plugin.BlueprintPlugin):
 
 	##~~ SettingsPlugin mixin
 
@@ -60,7 +60,7 @@ class SlicerPlugin(octoprint.plugin.SettingsPlugin,
 		# Define your plugin's asset files to automatically include in the
 		# core UI here.
 		return dict(
-			js=["js/stats.min.js", "js/octoprint_slicer.min.js"],
+			js=["js/stats.min.js", "js/octoprint_slicer.min.js", "js/CollisionDetectorWorker.min.js"],
 			css=["css/slicer.css"],
 			less=["less/slicer.less"]
 		)
@@ -123,6 +123,11 @@ class SlicerPlugin(octoprint.plugin.SettingsPlugin,
 
 			# Clear slicer changes
 			self.slicerChanges = None
+
+	# blueprint for the webworker
+	@octoprint.plugin.BlueprintPlugin.route("/CollisionDetectorWorker.js", methods=["GET"])
+	def getCollisionDetectorWorker(self):
+		return "foo";
 
 	# Upload event
 	@octoprint.plugin.BlueprintPlugin.route("/upload", methods=["POST"])

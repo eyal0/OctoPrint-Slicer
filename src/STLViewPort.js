@@ -24,7 +24,6 @@ import { forEach, isUndefined } from 'lodash-es';
 import * as THREE from 'three';
 import { BufferGeometryAnalyzer, OrbitControls, TransformControls, STLLoader, PointerInteractions } from '3tk';
 import { OrientationOptimizer } from './OrientationOptimizer';
-import { CollisionDetector } from './CollisionDetector';
 
 export function STLViewPort( canvas, width, depth, height ) {
 
@@ -153,7 +152,7 @@ export function STLViewPort( canvas, width, depth, height ) {
                 self.currentCollisions[index] ?
                 self.effectController.modelCollidingColors :
                 self.effectController.modelNonCollidingColors;
-            
+
             if (model == self.selectedModel()) {
                 model.children[0].material.color.copy(effectController.active);
             } else if ( self.pointerInteractions.hoveredObject && model == self.pointerInteractions.hoveredObject.parent ) {
@@ -174,8 +173,8 @@ export function STLViewPort( canvas, width, depth, height ) {
         new STLLoader().load(url, function ( geometry ) {
             var newModel = self.addModelOfGeometry(geometry);
             self.dispatchEvent( { type: eventType.add, models: [ newModel ] } );
-            // Detect collisions after the event in case the users wants to arrange, for example.
             self.dispatchEvent( { type: eventType.change } );
+            // Detect collisions after the event in case the users wants to arrange, for example.
             self.restartCollisionDetector();
         });
     };
@@ -292,16 +291,17 @@ export function STLViewPort( canvas, width, depth, height ) {
         }
     };
 
-    self.collisionDetector = new CollisionDetector(self.markCollidingModels);
+    self.collisionDetectorWorker = new Worker("plugin/slicer/static/js/CollisionDetectorWorker.min.js");
     self.restartCollisionDetector = function () {
         var EPSILON_Z = 0.0001;  // To deal with rounding error after fixZ.
         var printVolume = new THREE.Box3(
             new THREE.Vector3(-self.canvasWidth/2, -self.canvasDepth/2, -EPSILON_Z),
             new THREE.Vector3(self.canvasWidth/2, self.canvasDepth/2, self.canvasHeight));
         var TASK_SWITCH_MS = 50;
-        self.collisionDetector.start(self.models(),
-                                     printVolume,
-                                     TASK_SWITCH_MS);
+        self.collisionDetectorWorker.postMessage({
+            objects: self.models(),
+            volume: printVolume,
+            timeoutMilliseconds: TASK_SWITCH_MS});
     };
 
     self.onChange = function() {
