@@ -205,18 +205,18 @@ function SlicerViewModel(parameters) {
                 </div>\
                 <div class="values rotate">\
                     <div>\
-                        <a class="close"><i class="icon-remove-sign" /></a>\
+                        <a class="close"><img class="icon-remove-sign" /></a>\
                         <p><span class="axis x">X</span><input type="number" step="any" name="x"><span title="">°</span></p>\
                         <p><span class="axis y">Y</span><input type="number" step="any" name="y"><span title="">°</span></p>\
                         <p><span class="axis z">Z</span><input type="number" step="any" name="z"><span title="">°</span></p>\
-                        <p><button id="lay-flat" class="btn"><i class="icon-glass" /><span>&nbsp;Lay flat</span></button></p>\
-                        <p><button id="rotate0" class="btn"><i class="icon-fast-backward" /><span>&nbsp;Reset</span></button></p>\
+                        <p><button id="lay-flat" class="btn"><img class="icon-glass" /><span>&nbsp;Lay flat</span></button></p>\
+                        <p><button id="rotate0" class="btn"><img class="icon-fast-backward" /><span>&nbsp;Reset</span></button></p>\
                         <span></span>\
                     </div>\
                </div>\
                 <div class="values scale">\
                     <div>\
-                        <a class="close"><i class="icon-remove-sign" /></a>\
+                        <a class="close"><img class="icon-remove-sign" /></a>\
                         <p><span class="axis x">X</span><input type="number" step="0.001" name="x" min="0.001"><span class="size x" ></span></p>\
                         <p><span class="axis y">Y</span><input type="number" step="0.001" name="y" min="0.001"><span class="size y" ></span></p>\
                         <p><span class="axis z">Z</span><input type="number" step="0.001" name="z" min="0.001"><span class="size z" ></span></p>\
@@ -227,7 +227,7 @@ function SlicerViewModel(parameters) {
                </div>\
                 <div class="values chop">\
                     <div>\
-                        <a class="close"><i class="icon-remove-sign" /></a>\
+                        <a class="close"><img class="icon-remove-sign" /></a>\
                         <p><span class="axis">Offset</span><input type="number" step="0.1" id="chopOffsetMm" value=0>\
                            <span class="add-on">mm</span>\
                         <p><span class="axis">Offset%</span><input type="number" step="0.1" min="0" max="100" id="chopOffsetPercent" value=50>\
@@ -243,10 +243,10 @@ function SlicerViewModel(parameters) {
                </div>\
                <div class="values more">\
                    <div>\
-                       <a class="close"><i class="icon-remove-sign" /></a>\
-                       <p><button id="split" class="btn"><i class="icon-unlink" /><span>&nbsp;Split into parts</span></button></p>\
-                       <p><button id="duplicate" class="btn"><i class="icon-copy" /><span>&nbsp;Duplicate</span></button></p>\
-                       <p><button id="info" class="btn"><i class="icon-info" /><span>&nbsp;Advanced usage</span></button></p>\
+                       <a class="close"><img class="icon-remove-sign" /></a>\
+                       <p><button id="split" class="btn"><img class="icon-unlink" /><span>&nbsp;Split into parts</span></button></p>\
+                       <p><button id="duplicate" class="btn"><img class="icon-copy" /><span>&nbsp;Duplicate</span></button></p>\
+                       <p><button id="info" class="btn"><img class="icon-info" /><span>&nbsp;Advanced usage</span></button></p>\
                        <span></span>\
                    </div>\
                </div>');
