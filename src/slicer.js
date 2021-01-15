@@ -22,22 +22,6 @@ function isDev() {
     return window.location.hostname == "localhost";
 }
 
-if ( ! isDev() && typeof(Raven) !== 'undefined' ) {
-    Raven.config('https://85bd9314656d40da9249aec5a32a2b52@sentry.io/141297', {
-        release: '1.3.4',
-        ignoreErrors: [
-            "Failed to execute 'arc' on 'CanvasRenderingContext2D': The radius provided",
-            "Cannot read property 'highlightFill' of undefined",
-            "Argument 1 of SVGMatrix.translate is not a finite floating-point value",
-            /_jp.*is not a function/,
-            "chrome is not defined",
-            "You cannot apply bindings multiple times to the same element.",
-            "SVG_MATRIX_NOT_INVERTABLE",
-            "The index is not in the allowed range.",
-        ],
-    }).install();
-}
-
 function SlicerViewModel(parameters) {
     mixpanel.track("App Loaded");
 
@@ -195,7 +179,7 @@ function SlicerViewModel(parameters) {
 
         // Buttons on the canvas, and their behaviors.
         // TODO: it's not DRY. mix of prez code and logics. need to figure out a better way
-        $("#slicer-viewport").empty().append('<div class="report"><span>Got issues or suggestions? <a target="_blank" href="https://goo.gl/forms/P9Vw2fZRYJCy7RAn1">Click here!</a></span></div>\
+        $("#slicer-viewport").empty().append('\
                   <div class="model">\
                     <button class="rotate disabled btn" title="Rotate"><img src="'
                         + PLUGIN_BASEURL
@@ -236,7 +220,8 @@ function SlicerViewModel(parameters) {
                         <p><span class="axis x">X</span><input type="number" step="0.001" name="x" min="0.001"><span class="size x" ></span></p>\
                         <p><span class="axis y">Y</span><input type="number" step="0.001" name="y" min="0.001"><span class="size y" ></span></p>\
                         <p><span class="axis z">Z</span><input type="number" step="0.001" name="z" min="0.001"><span class="size z" ></span></p>\
-                        <p class="checkbox"><label><input type="checkbox" id="lock" checked>Lock</label></p>\
+                        <p class="checkbox"><label><input id="lock-scale" type="checkbox" checked>Lock</label></p>\
+                        <p class="checkbox"><label><input id="mirror-x" type="checkbox">Mirror X</label><label><input id="mirror-y" type="checkbox">Mirror Y</label></p>\
                         <span></span>\
                     </div>\
                </div>\
@@ -383,8 +368,12 @@ function SlicerViewModel(parameters) {
             applyValueInputs($(this));
         });
 
-        $("#slicer-viewport .values input[type='checkbox']").change( function() {
-            applyValueInputs($(this));
+        $("#slicer-viewport .values input#lock-scale").change( function(event) {
+            self.lockScale = event.target.checked;
+        });
+
+        $("#slicer-viewport .values input[id^=mirror]").change( function(event) {
+            applyMirrorScale(event.target);
         });
 
         $("#slicer-viewport .values input[type='radio']").change( function() {
@@ -510,7 +499,8 @@ function SlicerViewModel(parameters) {
             contentType: "application/json; charset=UTF-8",
             data: JSON.stringify(data),
             error: function(jqXHR, textStatus) {
-                new PNotify({title: "Slicing failed", text: textStatus, type: "error", hide: false});
+                new PNotify({title: "Slicing failed", text: jqXHR.responseText, type: "error", hide: false});
+                self.slicing(false);
             }
         });
     };
@@ -554,7 +544,7 @@ function SlicerViewModel(parameters) {
                 self.sendSliceRequest(target, tempFilename, sliceRequestData);
             },
             error: function(jqXHR, textStatus) {
-                new PNotify({title: "Slicing failed", text: textStatus, type: "error", hide: false});
+                new PNotify({title: "Slicing failed", text: jqXHR.responseText, type: "error", hide: false});
                 self.slicing(false);
             }
         });
@@ -779,6 +769,18 @@ function SlicerViewModel(parameters) {
             self.slicingViewModel.file().slice(pos)].join('');
     };
 
+    // Pause WebGL rendering when slicer tab is inactive
+    self.onTabChange = function (next, current) {
+        if (current === "#tab_plugin_slicer") {
+            self.stlViewPort.pauseRendering();
+        }
+    }
+    self.onAfterTabChange = function (current, previous) {
+        if (current === "#tab_plugin_slicer") {
+            self.stlViewPort.unpauseRendering();
+        }
+    }
+
     self.init();
 
     //////////////////////
@@ -831,6 +833,28 @@ function SlicerViewModel(parameters) {
         }
     }
 
+    function updateMirrorCheckboxes() {
+        var model = self.stlViewPort.selectedModel();
+        $("#slicer-viewport .scale.values input#mirror-x").prop('checked', model.scale.x < 0);
+        $("#slicer-viewport .scale.values input#mirror-y").prop('checked',model.scale.y < 0);
+    }
+
+    function updateValueInputs() {
+        var model = self.stlViewPort.selectedModel();
+        if (model) {
+            $("#slicer-viewport .rotate.values input[name=\"x\"]").val((model.rotation.x * 180 / Math.PI).toFixed(1)).attr("min", '');
+            $("#slicer-viewport .rotate.values input[name=\"y\"]").val((model.rotation.y * 180 / Math.PI).toFixed(1)).attr("min", '');
+            $("#slicer-viewport .rotate.values input[name=\"z\"]").val((model.rotation.z * 180 / Math.PI).toFixed(1)).attr("min", '');
+            $("#slicer-viewport .scale.values input[name=\"x\"]").val(model.scale.x.toFixed(3)).attr("min", '');
+            $("#slicer-viewport .scale.values input[name=\"y\"]").val(model.scale.y.toFixed(3)).attr("min", '');
+            $("#slicer-viewport .scale.values input[name=\"z\"]").val(model.scale.z.toFixed(3)).attr("min", '');
+            $("#slicer-viewport .scale.values input#lock-scale").checked = self.lockScale;
+
+            updateSizeInfo();
+            updateMirrorCheckboxes();
+        }
+    }
+
     function updateControlState() {
         if (!self.stlViewPort.selectedModel()) {
             $("#slicer-viewport button").addClass("disabled");
@@ -864,11 +888,10 @@ function SlicerViewModel(parameters) {
     }
 
     function applyValueInputs(input) {
-        if(input[0].type == "checkbox" && input[0].id == "lock") {
+        if(input[0].type == "checkbox" && input[0].id == "lock-scale") {
             self.lockScale = input[0].checked;
         }
         else if(input[0].type == "number" && !isNaN(parseFloat(input.val()))) {
-
             var model = self.stlViewPort.selectedModel();
             if (model === undefined) return;
 
@@ -891,6 +914,7 @@ function SlicerViewModel(parameters) {
 
             self.fixZPosition(model);
             updateSizeInfo();
+            updateMirrorCheckboxes();
             self.stlViewPort.recalculateOverhang(model);
             self.stlViewPort.resetCollisionDetector();
         }
@@ -901,20 +925,21 @@ function SlicerViewModel(parameters) {
         }
     }
 
-    function updateValueInputs() {
+    function applyMirrorScale(mirrorCheckbox) {
         var model = self.stlViewPort.selectedModel();
-        if (model) {
-            $("#slicer-viewport .rotate.values input[name=\"x\"]").val((model.rotation.x * 180 / Math.PI).toFixed(1)).attr("min", '');
-            $("#slicer-viewport .rotate.values input[name=\"y\"]").val((model.rotation.y * 180 / Math.PI).toFixed(1)).attr("min", '');
-            $("#slicer-viewport .rotate.values input[name=\"z\"]").val((model.rotation.z * 180 / Math.PI).toFixed(1)).attr("min", '');
-            $("#slicer-viewport .scale.values input[name=\"x\"]").val(model.scale.x.toFixed(3)).attr("min", '');
-            $("#slicer-viewport .scale.values input[name=\"y\"]").val(model.scale.y.toFixed(3)).attr("min", '');
-            $("#slicer-viewport .scale.values input[name=\"z\"]").val(model.scale.z.toFixed(3)).attr("min", '');
-            $("#slicer-viewport .scale.values input#lock").checked = self.lockScale;
-
-            updateSizeInfo();
+        if (mirrorCheckbox.id == "mirror-x") {
+            model.scale.x = -1 * model.scale.x;
         }
+        if (mirrorCheckbox.id == "mirror-y") {
+            model.scale.y = -1 * model.scale.y;
+        }
+        if (mirrorCheckbox.checked) {
+            self.lockScale = false;
+        }
+
+        updateValueInputs();
     }
+
 }
 
 
