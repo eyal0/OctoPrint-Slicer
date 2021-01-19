@@ -203,7 +203,7 @@ export function STLViewPort( canvas, width, depth, height ) {
         var models = map(geometries, function (geometry) {
             var material = new THREE.MeshStandardMaterial({
                 color: self.effectController.modelNonCollidingColors.inactive,  // We'll mark it active below.
-                shading: THREE.SmoothShading,
+                flatShading: true,
                 side: THREE.DoubleSide,
                 metalness: self.effectController.metalness,
                 roughness: self.effectController.roughness,
